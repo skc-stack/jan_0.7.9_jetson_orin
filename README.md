@@ -1,4 +1,13 @@
 # Jan AI Desktop Application v0.7.9 - Build & Install Guide for Jetson Orin Nano
+## 下載連結
+
+已編譯好的 Jan AI v0.7.9 安裝包：
+
+- [.deb 安裝包 (126.8 MB)](https://github.com/skc-stack/jan_0.7.9_jetson_orin/releases/download/v0.7.9/Jan_0.7.9_Jetson.deb) - 適合使用 dpkg 安裝
+- [tar.gz 壓縮包 (172.6 MB)](https://github.com/skc-stack/jan_0.7.9_jetson_orin/releases/download/v0.7.9/Jan_0.7.9_Jetson.tar.gz) - 適合手動解壓縮
+
+---
+
 
 ## 目標機器
 - **IP**: 192.168.5.29
