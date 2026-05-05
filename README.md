@@ -15,31 +15,19 @@
 - **架構**: ARM64 (aarch64) - NVIDIA Jetson Orin Nano
 - **OS**: Ubuntu 22.04 with GNOME Desktop
 
----
+------
 
-## 前置準備
+## 安裝方式
 
-### 1. SSH 連線測試
-```bash
-ssh kghsai@192.168.5.29
-```
+### 選項一：.deb 安裝包（推薦）
 
-### 2. 系統環境確認
-```bash
-# 確認架構
-uname -m
-# 預期輸出: aarch64
 
-# 確認記憶體
-free -h
-# 建議: 至少 8GB RAM
+### 選項二：tar.gz 壓縮包
 
-# 確認磁碟空間
-df -h /home
-# 建議: 至少 50GB 可用空間
-```
 
 ---
+
+
 
 ## 系統依賴安裝
 
