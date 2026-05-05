@@ -1,50 +1,70 @@
 # Jan AI Desktop Application v0.7.9 - Build & Install Guide for Jetson Orin Nano
-## 下載連結
-
-已編譯好的 Jan AI v0.7.9 安裝包：
-
-- [.deb 安裝包 (126.8 MB)](https://github.com/skc-stack/jan_0.7.9_jetson_orin/releases/download/v0.7.9/Jan_0.7.9_Jetson.deb) - 適合使用 dpkg 安裝
-- [tar.gz 壓縮包 (172.6 MB)](https://github.com/skc-stack/jan_0.7.9_jetson_orin/releases/download/v0.7.9/Jan_0.7.9_Jetson.tar.gz) - 適合手動解壓縮
-
----
-
 
 ## 目標機器
-- **IP**: 192.168.5.29
+- **IP**: 192.168.5.29 (或其他 Jetson Orin Nano)
 - **帳號**: kghsai
 - **架構**: ARM64 (aarch64) - NVIDIA Jetson Orin Nano
 - **OS**: Ubuntu 22.04 with GNOME Desktop
 
-------
+---
 
-## 安裝方式
+## 安裝方式選擇
 
-### 選項一：.deb 安裝包（推薦）
+### 方式一：使用預編譯 binary（推薦給相同配置的機器）
 
+如果機器架構相同，可以直接複製已經編譯好的 binary：
 
-### 選項二：tar.gz 壓縮包
+```bash
+# 從本機複製到遠端（在自己的電腦上執行）
+scp Jan kghsai@192.168.5.29:~/
+scp jan-cli kghsai@192.168.5.29:~/
 
+# 在遠端機器上設定權限
+chmod +x ~/Jan ~/jan-cli
+```
+
+### 方式二：從原始碼編譯（通用）
 
 ---
 
+## 從原始碼編譯
 
+### 前置準備
 
-## 系統依賴安裝
-
-### Node.js 20.x
+#### 1. 系統環境確認
 ```bash
-# 移除舊版 nodejs (如果存在)
-sudo apt-get remove -y nodejs npm libnode-dev
+# 確認架構
+uname -m
+# 預期輸出: aarch64
 
-# 安裝 Node.js 20.x
+# 確認記憶體
+free -h
+# 建議: 至少 8GB RAM
+
+# 確認磁碟空間
+df -h /home
+# 建議: 至少 50GB 可用空間
+```
+
+#### 2. 安裝 Node.js 20.x
+
+**重要：系統合併的 Node.js 版本太舊，需要安裝 Node.js 20**
+
+```bash
+# 移除舊版 nodejs
+sudo apt-get remove -y nodejs npm libnode-dev 2>/dev/null || true
+
+# 安裝 NodeSource 並安裝 Node.js 20
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
 # 驗證
 node --version  # 應為 v20.x.x
+npm --version   # 應為 10.x.x
 ```
 
-### Yarn 4.x (使用 Corepack)
+#### 3. 安裝 Yarn 4.x (使用 Corepack)
+
 ```bash
 # 啟用 corepack 並啟動 yarn 4.x
 sudo corepack enable
@@ -54,18 +74,8 @@ sudo corepack prepare yarn@4.5.3 --activate
 yarn --version  # 應為 4.x.x
 ```
 
-### Rust (用於 Tauri)
-```bash
-# 安裝 Rust (如果尚未安裝)
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source ~/.cargo/env
+#### 4. 安裝系統依賴
 
-# 驗證
-rustc --version
-cargo --version
-```
-
-### GTK3 & WebKitGTK 開發庫 (GUI 必備)
 ```bash
 sudo apt-get update
 sudo apt-get install -y \
@@ -77,10 +87,7 @@ sudo apt-get install -y \
     libasound2-dev \
     libpango1.0-dev \
     libatk1.0-dev \
-    libcairo2-dev
-
-# 額外必要工具
-sudo apt-get install -y \
+    libcairo2-dev \
     build-essential \
     pkg-config \
     libssl-dev \
@@ -88,12 +95,24 @@ sudo apt-get install -y \
     librsvg2-dev
 ```
 
+#### 5. 安裝 Rust (用於 Tauri)
+
+```bash
+# 安裝 Rust（如果尚未安裝）
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source ~/.cargo/env
+
+# 驗證
+rustc --version
+cargo --version
+```
+
 ---
 
 ## 下載 Jan v0.7.9 原始碼
 
 ```bash
-# 移除舊版本 (如果存在)
+# 移除舊版本（如果存在）
 rm -rf ~/jan-0.7.9
 
 # 下載 v0.7.9 原始碼
@@ -125,8 +144,6 @@ sed -i 's/"version": "0.6.599"/"version": "0.7.9"/g' ~/jan-0.7.9/src-tauri/tauri
 
 ```bash
 cd ~/jan-0.7.9
-
-# 安裝 node_modules
 yarn install
 ```
 
@@ -134,9 +151,25 @@ yarn install
 
 ## 下載必要二進位檔案
 
-Jetson Orin 需要下載 ARM64 專用的 uv、bun、sqlite-vec 等工具：
+**重要：需要下載 ARM64 版本的工具，x86_64 版本無法在 Jetson 上運作**
 
 ```bash
+cd ~/jan-0.7.9/src-tauri/resources/bin
+
+# 下載 uv ARM64 版本
+wget https://github.com/astral-sh/uv/releases/download/0.6.4/uv-aarch64-unknown-linux-gnu.tar.gz
+tar -xzf uv-aarch64-unknown-linux-gnu.tar.gz
+rm uv-aarch64-unknown-linux-gnu.tar.gz
+
+# 下載 bun ARM64 版本
+cd /tmp
+wget https://github.com/oven-sh/bun/releases/download/bun-v1.3.13/bun-linux-aarch64.zip
+unzip -o bun-linux-aarch64.zip
+cp bun-linux-aarch64/bun ~/jan-0.7.9/src-tauri/resources/bin/bun
+rm -rf bun-linux-aarch64 bun-linux-aarch64.zip
+
+# 複製 sqlite-vec（如果下載的版本不支援 ARM64）
+cd ~/jan-0.7.9
 yarn download:bin
 ```
 
@@ -145,18 +178,14 @@ yarn download:bin
 ## 建立資源目錄結構
 
 ```bash
-# 建立必要目錄
 mkdir -p ~/jan-0.7.9/src-tauri/resources/pre-install
 mkdir -p ~/jan-0.7.9/src-tauri/resources/bin
 
-# 複製 uv (Python 環境管理器)
-cp -r ~/jan-0.7.9/scripts/dist/uv-aarch64-unknown-linux-gnu ~/jan-0.7.9/src-tauri/resources/bin/
+# 複製 ARM64 uv
+cp -r ~/jan-0.7.9/src-tauri/resources/bin/uv-aarch64-unknown-linux-gnu ~/jan-0.7.9/src-tauri/resources/bin/uv
 
-# 複製 bun (JavaScript 執行環境)
-cp ~/jan-0.7.9/scripts/dist/bun-linux-aarch64/bun ~/jan-0.7.9/src-tauri/resources/bin/bun
-
-# 複製 sqlite-vec
-cp ~/jan-0.7.9/scripts/dist/vec0.so ~/jan-0.7.9/src-tauri/resources/bin/sqlite-vec.so
+# 複製 bun
+cp /tmp/bun ~/jan-0.7.9/src-tauri/resources/bin/bun 2>/dev/null || true
 
 # 建立 pre-install 佔位檔案（避免 glob 錯誤）
 touch ~/jan-0.7.9/src-tauri/resources/pre-install/.gitkeep
@@ -175,7 +204,7 @@ yarn pack
 cd ..
 
 # 編譯 extensions (產生 .tgz 檔案)
-yarn build:extensions
+IS_TAURI=true yarn build:extensions
 ```
 
 ---
@@ -332,6 +361,7 @@ cat /proc/$(pgrep -f "release/Jan")/status | grep -E "Name|State|VmRSS|Threads"
 - 確認 DISPLAY 環境變數已設定 (DISPLAY=:1)
 - 確認 X server 正常運行
 - 確認 GTK3 開發庫已正確安裝
+- 需要在有桌面環境的 session 中執行，不能純 SSH
 
 ### 3. Web 前端編譯失敗 (@janhq/core 找不到)
 解決方案：
@@ -342,7 +372,8 @@ yarn pack
 
 # 重新安裝 extensions
 cd ~/jan-0.7.9
-yarn build:extensions
+yarn install
+IS_TAURI=true yarn build:extensions
 ```
 
 ### 4. Yarn 4.x 權限問題
@@ -363,11 +394,22 @@ yarn build:icon
 症狀：`resource path resources/bin/uv-aarch64-unknown-linux-gnu doesn't exist`
 解決方案：
 ```bash
-yarn download:bin
 mkdir -p src-tauri/resources/pre-install
 touch src-tauri/resources/pre-install/.gitkeep
-cp -r scripts/dist/uv-aarch64-unknown-linux-gnu src-tauri/resources/bin/
+yarn download:bin
+# 然後手動下載 ARM64 版本替換
 ```
+
+### 7. Binary 架構不符
+預編譯的 .deb 可能包含 x86_64 binary，在 ARM64 機器上無法運行
+解決方案：需要從原始碼編譯
+
+### 8. SSH 環境無法執行 GUI
+Jan GUI 需要 GTK 初始化，純 SSH 環境無法執行
+解決方案：
+- 在本機桌面登入並開啟 terminal
+- 或使用 VNC 等遠端桌面
+- jan-cli 可以正常運作
 
 ---
 
@@ -384,35 +426,46 @@ cp -r scripts/dist/uv-aarch64-unknown-linux-gnu src-tauri/resources/bin/
 ## 快速指令總結
 
 ```bash
-# 1. SSH 連線
-ssh kghsai@192.168.5.29
+# 1. 安裝 Node.js 20 和 Yarn 4
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+sudo corepack enable
+sudo corepack prepare yarn@4.5.3 --activate
 
-# 2. 下載並解壓縮 v0.7.9
+# 2. 安裝系統依賴
+sudo apt-get install -y libgtk-3-dev libjavascriptcoregtk-4.1-dev libwebkit2gtk-4.1-dev libsoup-3.0-dev libgbm-dev libasound2-dev libpango1.0-dev libatk1.0-dev libcairo2-dev build-essential pkg-config libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+# 3. 下載並解壓縮 v0.7.9
+cd ~
+rm -rf ~/jan-0.7.9
 wget https://github.com/janhq/jan/archive/refs/tags/v0.7.9.tar.gz
 tar -xzf v0.7.9.tar.gz && rm v0.7.9.tar.gz
 
-# 3. 安裝依賴
+# 4. 安裝依賴
 cd ~/jan-0.7.9
 yarn install
-yarn download:bin
 
-# 4. 準備資源
-mkdir -p src-tauri/resources/pre-install src-tauri/resources/bin
-cp -r scripts/dist/uv-aarch64-unknown-linux-gnu src-tauri/resources/bin/
-cp scripts/dist/bun-linux-aarch64/bun src-tauri/resources/bin/bun
-cp scripts/dist/vec0.so src-tauri/resources/bin/sqlite-vec.so
-touch src-tauri/resources/pre-install/.gitkeep
+# 5. 準備資源（手動下載 ARM64 binary）
+cd ~/jan-0.7.9/src-tauri/resources/bin
+wget https://github.com/astral-sh/uv/releases/download/0.6.4/uv-aarch64-unknown-linux-gnu.tar.gz
+tar -xzf uv-aarch64-unknown-linux-gnu.tar.gz && rm uv-aarch64-unknown-linux-gnu.tar.gz
+cd /tmp
+wget https://github.com/oven-sh/bun/releases/download/bun-v1.3.13/bun-linux-aarch64.zip
+unzip -o bun-linux-aarch64.zip
+cp bun-linux-aarch64/bun ~/jan-0.7.9/src-tauri/resources/bin/bun
+mkdir -p ~/jan-0.7.9/src-tauri/resources/pre-install
+touch ~/jan-0.7.9/src-tauri/resources/pre-install/.gitkeep
 
-# 5. 編譯
+# 6. 編譯
 yarn build:icon
 cd core && yarn pack && cd ..
-yarn build:extensions
+IS_TAURI=true yarn build:extensions
 export IS_TAURI=true && yarn build:web
 source ~/.cargo/env && cd src-tauri && cargo build --release --features cli --bin jan-cli -j 1
 cp target/release/jan-cli src-tauri/resources/bin/jan-cli
 cargo build --release -j 1
 
-# 6. 建立桌面捷徑
+# 7. 建立桌面捷徑
 cp src-tauri/icons/128x128.png ~/Desktop/jan-icon.png
 cat > ~/Desktop/jan.desktop << 'EOF'
 [Desktop Entry]
@@ -427,11 +480,12 @@ StartupWMClass=Jan
 EOF
 chmod +x ~/Desktop/jan.desktop
 
-# 7. 啟動 Jan
+# 8. 啟動 Jan
 DISPLAY=:1 nohup ~/jan-0.7.9/src-tauri/target/release/Jan > /tmp/jan_gui.log 2>&1 &
 
-# 8. 驗證
+# 9. 驗證
 pgrep -a -f "release/Jan"
+~/jan-0.7.9/src-tauri/target/release/jan-cli --version
 ```
 
 ---
